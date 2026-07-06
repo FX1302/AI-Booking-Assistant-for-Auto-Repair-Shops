@@ -107,4 +107,4 @@ Built with a "no silent failures" mindset from 10+ years in banking backend syst
 Built by **Feri Supriadi** — Data Engineer & AI Automation specialist with 10+ years of backend and data engineering experience in banking and finance.
 
 - GitHub: [FX1302](https://github.com/FX1302)
-- LinkedIn: [Feri Supriadi](https://www.linkedin.com/in/YOUR-LINKEDIN-URL)
+- LinkedIn: [Feri Supriadi](https://www.linkedin.com/in/feri-supriadi-ba0792359/)
