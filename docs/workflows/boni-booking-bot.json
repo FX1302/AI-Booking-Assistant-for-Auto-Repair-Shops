@@ -1,0 +1,964 @@
+{
+  "name": "ChatBot",
+  "nodes": [
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.question }}",
+        "replyMarkup": "replyKeyboard",
+        "replyKeyboardOptions": {},
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -48
+      ],
+      "id": "fcde724e-2ac0-4e92-b17c-b5a09ba9344e",
+      "name": "Admin Replied",
+      "webhookId": "REGENERATED_ON_IMPORT",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1216,
+        -336
+      ],
+      "id": "f0eb35e6-a9df-486b-a704-9a07f02fc318",
+      "name": "Telegram Trigger",
+      "webhookId": "REGENERATED_ON_IMPORT",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from public.getuser({{ $('Telegram Trigger').item.json.message.chat.id }}::BIGINT)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -944,
+        -336
+      ],
+      "id": "edd71744-b7d4-450f-9ae8-ed654aae69d6",
+      "name": "Register State",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b5870cfa-833d-4730-9e09-cffac7d0e8c9",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "OLD",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "7dbcbda6-05e7-4509-a1c6-ff71058f3fc1",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -736,
+        -336
+      ],
+      "id": "46da356a-6096-40ff-b5c3-9770fc3af45a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Task: Validate and normalize the user's answer.\n\nUser answer: {{ $('Telegram Trigger').first().json.message.text }}\n\nFirst, call the t_answer tool to retrieve the valid answers and rules for the current question.\n\nAn answer is VALID if it meets AT LEAST ONE of:\n1. It matches one of the answer entries returned by the tool.\n2.  It satisfies the rule described in the answer field (e.g. allowed days, allowed time ranges, or other constraints). Interpret natural-language rules carefully. \n\nReturn ONLY a valid JSON object, no extra text, in this exact format:\n{\n  \"is_valid\": true or false,\n  \"clean_answer\": \"the normalized/cleaned version of the user's answer if valid, otherwise empty string\",\n  \"reason\": \"short reason if invalid, otherwise empty string\"\n}\n\nRules for clean_answer:\n- Trim whitespace and fix casing to match the expected format.\n- If the answer maps to a canonical entry in the list, return that canonical value.\n- If invalid, clean_answer must be \"\".",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -256,
+        -448
+      ],
+      "id": "5a919a9d-b53c-4fef-a465-8470a9c5875c",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -288
+      ],
+      "id": "28218068-9de3-4f6d-8ca3-31aa4515a440",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "YOUR_OPENROUTER_CREDENTIAL_ID",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=Retrieves the list of valid answers and answer rules for a given question from the t_answer table. Each row contains id_question and the answer/rule text describing what counts as a valid answer (including allowed values and time/day constraints). Use this to check whether a user's answer is acceptable.",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "t_answer",
+          "mode": "list",
+          "cachedResultName": "t_answer"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "id_question",
+              "value": "={{ Number($('Register State').first().json.out_State) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -160,
+        -240
+      ],
+      "id": "7a763e16-316b-48e7-8097-2a03076a6b1e",
+      "name": "Select rows from a table in Postgres1",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "text": "={{ $json.question }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        -368
+      ],
+      "id": "c510738b-a463-42c9-a6c8-f0288b9ca030",
+      "name": "Send a text message",
+      "webhookId": "REGENERATED_ON_IMPORT",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e476caef-dcce-4aef-bc2f-2032015b3928",
+              "leftValue": "={{ $json.output.is_valid }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        48,
+        -416
+      ],
+      "id": "0435a225-d741-4d52-922c-b2ee7da62eea",
+      "name": "If1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=Your answer is not valid,\n{{ $json.question }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        528,
+        -224
+      ],
+      "id": "7d006f8d-c0f0-4809-936b-d54697d9f270",
+      "name": "Send a text message1",
+      "webhookId": "REGENERATED_ON_IMPORT",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "t_question",
+          "mode": "list",
+          "cachedResultName": "t_question"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "state",
+              "value": "={{ $json.out_State }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        784,
+        -368
+      ],
+      "id": "fe8c7b51-3e86-4e1b-9c5a-b50a9c41062c",
+      "name": "Next Question",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "t_question",
+          "mode": "list",
+          "cachedResultName": "t_question"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "state",
+              "value": "={{ $('Register State').item.json.out_State }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -496,
+        -48
+      ],
+      "id": "0f7c1805-069e-48ad-bafa-4630914ee3aa",
+      "name": "Send 1st question",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "t_question",
+          "mode": "list",
+          "cachedResultName": "t_question"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "state",
+              "value": "={{ $('Register State').first().json.out_State }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        -224
+      ],
+      "id": "672bae97-aae8-4da8-9652-f0916945339a",
+      "name": "Repeat Same Question",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select  * from public.updatestate({{ $('Register State').first().json.out_ChatId }},{{ \"'\" + $('AI Agent1').first().json.output.clean_answer  + \"'\" }});",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        -432
+      ],
+      "id": "4788238e-b4ef-4d7f-a0fc-2e1a2f964646",
+      "name": "Update State and Saving",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"is_valid\": true,\n  \"clean_answer\": \"Senin\",\n  \"reason\": \"\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        -240
+      ],
+      "id": "5d9f7a94-9729-4768-bc72-77193dac4b19",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d5b0ef43-d6d1-4080-b3b3-5c7f6e3b64df",
+              "leftValue": "={{ $json.last_question }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        544,
+        -432
+      ],
+      "id": "44fc22af-553d-47c6-bbdc-6e553b4a7b92",
+      "name": "Last Question"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "01330617-1586-4b44-9180-275d1e6be710",
+              "leftValue": "={{ $json.isformcomplete }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -416,
+        -496
+      ],
+      "id": "c0bf28b9-6067-4911-8d51-56146cd52a99",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from public.isFormComplete({{ $('Register State').item.json.out_ChatId }})",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -576,
+        -496
+      ],
+      "id": "d6845e64-6b55-407b-9660-5130b7073958",
+      "name": "Check if complete",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Update State and Saving').item.json.out_ChatId }}",
+        "text": "=Your Booking is complete, please specify email address for recap of booking :",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        -592
+      ],
+      "id": "57b6e831-40f5-41db-9ade-82bc9533eea0",
+      "name": "Summary message",
+      "webhookId": "REGENERATED_ON_IMPORT",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Telegram Trigger').first().json.message.text;\nconst emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\nconst emails = text.match(emailRegex) || [];\n\nreturn [{\n  json: {\n    email: emails[0] || null,   // email pertama\n    all_emails: emails           // semua email kalau ada lebih dari satu\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -640
+      ],
+      "id": "71a09213-48fc-40b4-9496-4aa09b40c4bd",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ece771e0-a0e1-43e1-9242-8b3f3632e85a",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -80,
+        -704
+      ],
+      "id": "e6f645a0-1e5c-43b6-a0ed-22e7ddfc7bb7",
+      "name": "IsEmailValid"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['📧 Email'] }}",
+        "subject": "Your Booking Accepted",
+        "message": "=<p>Halo <b>{{ $json.name }}</b>,</p>\n<p>Your Booking already confirmed. Following is the details:\n</p>\n<table cellpadding=\"6\" style=\"border-collapse:collapse\">\n<tr><td><b>Nama</b></td>\n<td>\n{{ $json['👤 Nama'] }}\n</td></tr>\n<tr><td><b>Email</b></td><td>\n{{ $json['📧 Email'] }}\n</td></tr>\n  <tr><td><b>Lokasi</b></td><td>\n{{ $json['🏬 Branch '] }}\n</td></tr>\n  <tr><td><b>Layanan</b></td><td>\n{{ $json['🧾Package'] }}\n</td></tr>\n  <tr><td><b>Jadwal</b></td><td>\n{{ $json['📅 Jadwal'] }}\n</td></tr>\n</table>\n<hr>\n<p style=\"color:#888;font-size:12px\">\nThis email was sent automatically.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        -704
+      ],
+      "id": "ea7a3827-1207-46b4-a926-1e881639bda7",
+      "name": "Send a message",
+      "webhookId": "REGENERATED_ON_IMPORT",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f0368e69-f227-4a86-8d5b-f31282c72514",
+              "name": "👤 Nama",
+              "value": "=:  {{ $json.v_summary.items[0].Name }}",
+              "type": "string"
+            },
+            {
+              "id": "752e621a-8cca-4c5c-a938-f026fd009c51",
+              "name": "📧 Email",
+              "value": "={{ $json.v_summary.email }}",
+              "type": "string"
+            },
+            {
+              "id": "e8d4301e-cd1d-42ed-ad8e-3bbbae39190d",
+              "name": "🏬 Branch ",
+              "value": "={{ $json.v_summary.items[3].Branch }}",
+              "type": "string"
+            },
+            {
+              "id": "703f872f-8df1-48fd-b5ff-1329e43b977c",
+              "name": "🧾Package",
+              "value": "={{ $json.v_summary.items[4].Package }}",
+              "type": "string"
+            },
+            {
+              "id": "b76f24ed-2f1d-46fa-a168-61bc7fb9365f",
+              "name": "📅 Jadwal",
+              "value": "={{ $json.v_summary.items[5]['Date and Time'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        -704
+      ],
+      "id": "3846c4a9-1945-40f1-90ac-76f412d14bef",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from public.sumtojson({{ $('Telegram Trigger').item.json.message.from.id }},'{{ $('Telegram Trigger').item.json.message.text }}')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        144,
+        -720
+      ],
+      "id": "73fe19c5-142a-4291-ac53-ce810e17c424",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Register State').item.json.out_ChatId }}",
+        "text": "=We already send email to {{ $('Edit Fields').item.json['📧 Email'] }} , \nplease check your booking confirmation. ",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        -704
+      ],
+      "id": "ea151d53-71fb-47d7-8ce4-7ad1bc8b6467",
+      "name": "Send a text message2",
+      "webhookId": "REGENERATED_ON_IMPORT",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Register State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Replied": {
+      "main": [
+        []
+      ]
+    },
+    "Register State": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Check if complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send 1st question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table in Postgres1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Update State and Saving",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Repeat Same Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next Question": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send 1st question": {
+      "main": [
+        [
+          {
+            "node": "Admin Replied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repeat Same Question": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update State and Saving": {
+      "main": [
+        [
+          {
+            "node": "Last Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last Question": {
+      "main": [
+        [
+          {
+            "node": "Summary message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Next Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if complete": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "IsEmailValid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IsEmailValid": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}
