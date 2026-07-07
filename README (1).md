@@ -8,7 +8,7 @@ The bot walks the customer through a guided booking flow (name, branch, service 
 >
 > | Conversation | Workflow canvas |
 > |---|---|
-> | ![Chat demo](docs/chat-demo.png) | ![n8n workflow](docs/workflow-canvas.png) |
+> | ![Chat demo](docs/chatbot.mp4) | ![n8n workflow](docs/workflow-canvas.png) |
 
 ---
 
